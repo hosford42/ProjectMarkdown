@@ -193,8 +193,8 @@ installed on your system. You can clone the repository or
 download the module directly.
 
 ```bash
-git clone https://github.com/hosford42/project_markdown.git
-cd project_markdown
+git clone https://github.com/hosford42/ProjectMarkdown.git
+cd ProjectMarkdown
 ```
 
 ## Usage
