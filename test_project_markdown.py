@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from textwrap import dedent
 
 from project_markdown import generate_markdown, read_gitignore, should_ignore, generate_structure, generate_file_contents
 
@@ -57,14 +58,14 @@ class TestDirectoryMarkdown(unittest.TestCase):
         ignore_patterns = read_gitignore(self.test_dir)
         structure = generate_structure(self.test_dir, ignore_patterns)
 
-        expected_structure = (
-            "├── file1.py\n"
-            "├── file_with_backticks.py\n"
-            "└── subdir1\n"
-            "    └── file3.py\n"
-        )
+        expected_structure = dedent("""
+            ├── file1.py
+            ├── file_with_backticks.py
+            └── subdir1
+                └── file3.py
+        """)
 
-        self.assertEqual(structure, expected_structure,
+        self.assertEqual(structure.strip(), expected_structure.strip(),
                          f"Expected structure:\n{expected_structure}\nGot:\n{structure}")
 
     def test_generate_file_contents(self):
@@ -86,14 +87,13 @@ class TestDirectoryMarkdown(unittest.TestCase):
     def test_generate_markdown(self):
         report = generate_markdown(self.test_dir)
         expected_report_start = "# Directory Structure for"
-        expected_structure = (
-            "```plaintext\n"
-            "├── file1.py\n"
-            "├── file_with_backticks.py\n"
-            "└── subdir1\n"
-            "    └── file3.py\n"
-            "```\n\n"
-        )
+        expected_structure = dedent("""
+            ```plaintext
+            ├── file1.py
+            ├── file_with_backticks.py
+            └── subdir1
+                └── file3.py
+            ```\n""")
         expected_contents = (
             "## File: file1.py\n\n"
             "```python\nprint('Hello from file1')\n```\n\n"

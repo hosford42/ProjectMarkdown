@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 
 import pyperclip
 
@@ -42,28 +43,27 @@ def generate_markdown(directory):
     return markdown
 
 
-def generate_structure(directory, ignore_patterns, indent=0):
-    structure = ""
+def generate_structure(directory, ignore_patterns):
+    structure = ''
     items = os.listdir(directory)
     items.sort()
 
     items = [item for item in items if not should_ignore(item, ignore_patterns)]
-
-    for index, item in enumerate(items):
+    for i, item in enumerate(items):
         path = os.path.join(directory, item)
-        is_last_item = index == len(items) - 1
-        prefix = "    " if is_last_item else "│   "
-        connector = "└── " if is_last_item else "├── "
-
-        structure += f"{connector}{item}\n"
+        is_last = i == len(items) - 1
 
         if os.path.isdir(path):
-            sub_structure = generate_structure(path, ignore_patterns, indent + 1)
-            sub_structure = (sub_structure
-                             .replace("│", prefix)
-                             .replace("├──", prefix + "├──")
-                             .replace("└──", prefix + "└──"))
-            structure += sub_structure
+            substructure = generate_structure(path, ignore_patterns).splitlines(keepends=False)
+            if is_last:
+                structure += f'└── {item}\n    ' + '\n    '.join(substructure) + '\n'
+            else:
+                structure += f'├── {item}\n│   ' + '\n│   '.join(substructure) + '\n'
+        else:
+            if is_last:
+                structure += f'└── {item}\n'
+            else:
+                structure += f'├── {item}\n'
 
     return structure
 

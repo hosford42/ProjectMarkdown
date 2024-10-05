@@ -40,6 +40,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 ````python
 import argparse
 import os
+import re
 
 import pyperclip
 
@@ -82,28 +83,27 @@ def generate_markdown(directory):
     return markdown
 
 
-def generate_structure(directory, ignore_patterns, indent=0):
-    structure = ""
+def generate_structure(directory, ignore_patterns):
+    structure = ''
     items = os.listdir(directory)
     items.sort()
 
     items = [item for item in items if not should_ignore(item, ignore_patterns)]
-
-    for index, item in enumerate(items):
+    for i, item in enumerate(items):
         path = os.path.join(directory, item)
-        is_last_item = index == len(items) - 1
-        prefix = "    " if is_last_item else "│   "
-        connector = "└── " if is_last_item else "├── "
-
-        structure += f"{connector}{item}\n"
+        is_last = i == len(items) - 1
 
         if os.path.isdir(path):
-            sub_structure = generate_structure(path, ignore_patterns, indent + 1)
-            sub_structure = (sub_structure
-                             .replace("│", prefix)
-                             .replace("├──", prefix + "├──")
-                             .replace("└──", prefix + "└──"))
-            structure += sub_structure
+            substructure = generate_structure(path, ignore_patterns).splitlines(keepends=False)
+            if is_last:
+                structure += f'└── {item}\n    ' + '\n    '.join(substructure) + '\n'
+            else:
+                structure += f'├── {item}\n│   ' + '\n│   '.join(substructure) + '\n'
+        else:
+            if is_last:
+                structure += f'└── {item}\n'
+            else:
+                structure += f'├── {item}\n'
 
     return structure
 
@@ -267,6 +267,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from textwrap import dedent
 
 from project_markdown import generate_markdown, read_gitignore, should_ignore, generate_structure, generate_file_contents
 
@@ -322,14 +323,14 @@ class TestDirectoryMarkdown(unittest.TestCase):
         ignore_patterns = read_gitignore(self.test_dir)
         structure = generate_structure(self.test_dir, ignore_patterns)
 
-        expected_structure = (
-            "├── file1.py\n"
-            "├── file_with_backticks.py\n"
-            "└── subdir1\n"
-            "    └── file3.py\n"
-        )
+        expected_structure = dedent("""
+            ├── file1.py
+            ├── file_with_backticks.py
+            └── subdir1
+                └── file3.py
+        """)
 
-        self.assertEqual(structure, expected_structure,
+        self.assertEqual(structure.strip(), expected_structure.strip(),
                          f"Expected structure:\n{expected_structure}\nGot:\n{structure}")
 
     def test_generate_file_contents(self):
@@ -351,14 +352,13 @@ class TestDirectoryMarkdown(unittest.TestCase):
     def test_generate_markdown(self):
         report = generate_markdown(self.test_dir)
         expected_report_start = "# Directory Structure for"
-        expected_structure = (
-            "```plaintext\n"
-            "├── file1.py\n"
-            "├── file_with_backticks.py\n"
-            "└── subdir1\n"
-            "    └── file3.py\n"
-            "```\n\n"
-        )
+        expected_structure = dedent("""
+            ```plaintext
+            ├── file1.py
+            ├── file_with_backticks.py
+            └── subdir1
+                └── file3.py
+            ```\n""")
         expected_contents = (
             "## File: file1.py\n\n"
             "```python\nprint('Hello from file1')\n```\n\n"
