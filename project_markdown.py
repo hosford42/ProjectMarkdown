@@ -68,7 +68,7 @@ def generate_structure(directory, ignore_patterns):
     return structure
 
 
-def generate_file_contents(directory, ignore_patterns):
+def generate_file_contents(directory, ignore_patterns, root=None):
     contents = ""
     for item in os.listdir(directory):
         if should_ignore(item, ignore_patterns):
@@ -79,7 +79,7 @@ def generate_file_contents(directory, ignore_patterns):
                 file_contents = file.read()
                 if not file_contents.strip():
                     continue
-                contents += f"## File: {path}\n\n"
+                contents += f"## File: {os.path.join(root, item) if root else item}\n\n"
                 max_backticks = 0
                 current_backticks = 0
 
@@ -95,7 +95,7 @@ def generate_file_contents(directory, ignore_patterns):
                 syntax_signifier = FILE_TYPES.get(os.path.splitext(path)[-1], '')
                 contents += f"{delimiter}{syntax_signifier}\n{file_contents}\n{delimiter}\n\n"
         elif os.path.isdir(path):
-            contents += generate_file_contents(path, ignore_patterns)
+            contents += generate_file_contents(path, ignore_patterns, os.path.join(root, item) if root else item)
     return contents
 
 
