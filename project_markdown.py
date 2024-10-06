@@ -75,9 +75,11 @@ def generate_file_contents(directory, ignore_patterns):
             continue
         path = os.path.join(directory, item)
         if os.path.isfile(path):
-            contents += f"## File: {item}\n\n"
             with open(path, 'r', encoding='utf-8', errors='ignore') as file:
                 file_contents = file.read()
+                if not file_contents.strip():
+                    continue
+                contents += f"## File: {path}\n\n"
                 max_backticks = 0
                 current_backticks = 0
 
