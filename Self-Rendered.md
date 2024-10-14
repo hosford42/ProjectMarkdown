@@ -39,16 +39,30 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ````python
 import argparse
+import ast
 import os
-import re
 
 import pyperclip
 
-
 FILE_TYPES = {
     '.py': 'python',
+    '.js': 'javascript',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.rb': 'ruby',
+    '.go': 'go',
+    '.php': 'php',
+    '.swift': 'swift',
+    '.scala': 'scala',
+    '.rs': 'rust',
+    '.html': 'html',
+    '.css': 'css',
+    '.sql': 'sql',
+    '.xml': 'xml',
+    '.json': 'json',
     '.md': 'markdown',
-    '.txt': 'plaintext'
+    '.txt': 'plaintext',
 }
 
 
@@ -73,13 +87,13 @@ def should_ignore(item, ignore_patterns):
     return False
 
 
-def generate_markdown(directory):
+def generate_markdown(directory, summarize=False):
     ignore_patterns = read_gitignore(directory)
     markdown = f"# Directory Structure for '{directory}'\n\n"
     markdown += "```plaintext\n"
     markdown += generate_structure(directory, ignore_patterns)
     markdown += "```\n\n"
-    markdown += generate_file_contents(directory, ignore_patterns)
+    markdown += generate_file_contents(directory, ignore_patterns, summarize=summarize)
     return markdown
 
 
@@ -108,7 +122,7 @@ def generate_structure(directory, ignore_patterns):
     return structure
 
 
-def generate_file_contents(directory, ignore_patterns, root=None):
+def generate_file_contents(directory, ignore_patterns, root=None, summarize=False):
     contents = ""
     for item in os.listdir(directory):
         if should_ignore(item, ignore_patterns):
@@ -133,10 +147,41 @@ def generate_file_contents(directory, ignore_patterns, root=None):
                 max_backticks = max(max_backticks, current_backticks)
                 delimiter = '`' * max(3, max_backticks + 1)
                 syntax_signifier = FILE_TYPES.get(os.path.splitext(path)[-1], '')
+
+                if summarize and syntax_signifier == 'python':
+                    file_contents = replace_function_contents(file_contents)
+
                 contents += f"{delimiter}{syntax_signifier}\n{file_contents}\n{delimiter}\n\n"
         elif os.path.isdir(path):
-            contents += generate_file_contents(path, ignore_patterns, os.path.join(root, item) if root else item)
+            contents += generate_file_contents(path, ignore_patterns, os.path.join(root, item) if root else item,
+                                               summarize=summarize)
     return contents
+
+
+def replace_function_contents(file_contents):
+    """Replace the contents of functions and methods with their docstrings."""
+    try:
+        # Parse the file contents into an AST
+        tree = ast.parse(file_contents)
+
+        # Define a visitor class to replace function/method bodies
+        class FunctionReplacer(ast.NodeTransformer):
+            def visit_FunctionDef(self, node):
+                # Replace the function/method body with the docstring, if present
+                if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant):
+                    node.body = [node.body[0]]
+                else:
+                    node.body = [ast.Constant(value=Ellipsis)]
+                return node
+
+        # Apply the FunctionReplacer to the AST
+        new_tree = FunctionReplacer().visit(tree)
+
+        # Generate the modified source code
+        return ast.unparse(new_tree)
+    except (SyntaxError, ValueError):
+        # If there's an error parsing the file, return the original contents
+        return file_contents
 
 
 def copy_to_clipboard(text):
@@ -149,10 +194,12 @@ def main():
     parser.add_argument('directory', type=str, help='The directory path to examine.')
     parser.add_argument('-o', '--output', type=str, help='Output file to save the report.')
     parser.add_argument('-p', '--print', action='store_true', help='Print the report to stdout.')
+    parser.add_argument('-s', '--summarize', action='store_true',
+                        help='Replace function and method contents with ellipses.')
 
     args = parser.parse_args()
 
-    report = generate_markdown(args.directory)
+    report = generate_markdown(args.directory, summarize=args.summarize)
 
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as file:
